@@ -194,5 +194,5 @@ formatters:
         - default
         - localmodule
     gofumpt:
-      module-path: tools
+      module-path: github.com/neutral-jungle-creep/tools
       extra-rules: true
