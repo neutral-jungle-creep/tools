@@ -108,7 +108,12 @@ tasks:
           tag="$path/$version"
           if git rev-parse -q --verify "refs/tags/$tag" >/dev/null; then continue; fi
           last=$(git tag -l "$path/v*" --sort=-version:refname | head -n 1)
-          if [ -n "$last" ] && git diff --quiet "$last" HEAD -- "$path"; then continue; fi
+          set -- "$path"
+          for nested in {{.MODULES}}; do
+            nested="${nested#./}"
+            case "$nested" in "$path"/*) set -- "$@" ":(exclude)$nested" ;; esac
+          done
+          if [ -n "$last" ] && git diff --quiet "$last" HEAD -- "$@"; then continue; fi
           git tag "$tag"
           git push origin "refs/tags/$tag"
         done
