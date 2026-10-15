@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"tools/pkg/http/protocol"
+	"tools/http/protocol"
 )
 
 type unmarshalable struct{}

@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"tools/pkg/logging"
+	"tools/logging"
 )
 
 func TestAsyncLogger_StopUnblocksProcess(t *testing.T) {

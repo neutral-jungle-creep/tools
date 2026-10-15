@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"tools/pkg/background"
+	"tools/background"
 )
 
 func TestRegistrar_Run_NoJobsBlocksUntilCtxCancel(t *testing.T) {
