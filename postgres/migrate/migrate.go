@@ -45,7 +45,7 @@ func Up(ctx context.Context, db *sql.DB, dir string) error {
 	if err != nil {
 		return fmt.Errorf("соединение для миграций: %w", err)
 	}
-	driver, err := postgresdriver.WithConnection(ctx, conn, &postgresdriver.Config{})
+	driver, err := postgresdriver.WithConnection(ctx, conn, &postgresdriver.Config{MultiStatementEnabled: true})
 	if err != nil {
 		_ = conn.Close()
 		return fmt.Errorf("драйвер миграций: %w", err)
