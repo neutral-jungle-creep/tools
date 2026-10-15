@@ -1,4 +1,4 @@
-module tools
+module github.com/neutral-jungle-creep/tools
 
 go 1.26.9
 

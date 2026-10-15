@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"tools/logging"
+	"github.com/neutral-jungle-creep/tools/logging"
 )
 
 func TestAsyncLogger_StopUnblocksProcess(t *testing.T) {

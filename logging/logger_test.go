@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"tools/logging"
+	"github.com/neutral-jungle-creep/tools/logging"
 )
 
 func TestNewLogger_DefaultLevel(t *testing.T) {

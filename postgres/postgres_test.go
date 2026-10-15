@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"tools/postgres"
+	"github.com/neutral-jungle-creep/tools/postgres"
 )
 
 func TestNew_EmptyDSN(t *testing.T) {
