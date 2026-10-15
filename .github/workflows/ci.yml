@@ -21,6 +21,7 @@ jobs:
         with:
           go-version: ${{ env.GO_VERSION }}
           cache: true
+          cache-dependency-path: '**/go.sum'
       - uses: arduino/setup-task@v2
         with:
           version: 3.x
@@ -37,6 +38,7 @@ jobs:
         with:
           go-version: ${{ env.GO_VERSION }}
           cache: true
+          cache-dependency-path: '**/go.sum'
       - uses: arduino/setup-task@v2
         with:
           version: 3.x
@@ -53,6 +55,7 @@ jobs:
         with:
           go-version: ${{ env.GO_VERSION }}
           cache: true
+          cache-dependency-path: '**/go.sum'
       - uses: arduino/setup-task@v2
         with:
           version: 3.x
@@ -61,13 +64,16 @@ jobs:
         run: task tests
 
       - name: Check coverage threshold
-        run: bash scripts/check_coverage.sh .coverage/unit.out 50 ''
+        run: |
+          for module in $(find . -name go.mod -not -path '*/vendor/*' -exec dirname {} \; | sort); do
+            (cd "$module" && bash "$GITHUB_WORKSPACE/scripts/check_coverage.sh" .coverage/unit.out 50 '') || exit 1
+          done
 
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: unit-coverage
-          path: .coverage/unit.out
+          path: '**/.coverage/unit.out'
 
   build:
     name: Build packages
@@ -78,8 +84,13 @@ jobs:
         with:
           go-version: ${{ env.GO_VERSION }}
           cache: true
+          cache-dependency-path: '**/go.sum'
+      - uses: arduino/setup-task@v2
+        with:
+          version: 3.x
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
       - name: Build packages
-        run: go build ./...
+        run: task build
 
   security:
     name: Security (govulncheck)
@@ -90,5 +101,10 @@ jobs:
         with:
           go-version: ${{ env.GO_VERSION }}
           cache: true
+          cache-dependency-path: '**/go.sum'
+      - uses: arduino/setup-task@v2
+        with:
+          version: 3.x
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
       - name: Run govulncheck
-        run: go run golang.org/x/vuln/cmd/govulncheck@latest ./...
+        run: task security
