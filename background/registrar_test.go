@@ -23,7 +23,6 @@ func TestRegistrar_Run_NoJobsBlocksUntilCtxCancel(t *testing.T) {
 	done := make(chan error, 1)
 	go func() { done <- r.Run(ctx) }()
 
-	// Nothing should fire yet.
 	select {
 	case <-done:
 		t.Fatal("Run returned before ctx was cancelled")
@@ -44,7 +43,7 @@ func TestRegistrar_Run_ReturnsFirstJobError(t *testing.T) {
 
 	r := background.New()
 	r.RegisterJob(func() error {
-		time.Sleep(20 * time.Millisecond) // ensures the failing job wins the race
+		time.Sleep(20 * time.Millisecond)
 		return nil
 	})
 	want := errors.New("kaboom")
@@ -59,7 +58,7 @@ func TestRegistrar_Run_CtxCancelWinsOverPendingJobs(t *testing.T) {
 
 	r := background.New()
 	r.RegisterJob(func() error {
-		time.Sleep(time.Second) // never finishes before ctx cancel
+		time.Sleep(time.Second)
 		return errors.New("never")
 	})
 
@@ -93,8 +92,6 @@ func TestRegistrar_Stop_RunsAllHandlersInParallel(t *testing.T) {
 	elapsed := time.Since(start)
 
 	assert.Equal(t, int32(n), atomic.LoadInt32(&ran), "all handlers must run")
-	// If they ran sequentially elapsed would be >= n*50ms = 250ms.
-	// Parallel execution should finish in well under 200ms.
 	assert.Less(t, elapsed, 200*time.Millisecond, "handlers must run in parallel")
 }
 
@@ -136,6 +133,5 @@ func TestRegistrar_ConcurrentRegistrationIsSafe(t *testing.T) {
 	}
 	wg.Wait()
 
-	// Tear-down should not blow up.
 	_ = r.Stop()
 }

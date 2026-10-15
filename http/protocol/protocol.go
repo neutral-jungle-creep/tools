@@ -1,5 +1,3 @@
-// Package protocol provides a ResponseHandler that owns JSON encoding,
-// decoding+validation and error responses for HTTP handlers.
 package protocol
 
 import (
@@ -19,21 +17,14 @@ const (
 	incorrectRequestErrMsg = "incorrect request"
 )
 
-// Logger is the minimal logging contract the handler needs to report
-// JSON-encoding failures.
 type Logger interface {
 	Error(msg string, err error)
 }
 
-// Validator is satisfied by *validator.Validate from go-playground/validator
-// (and by any other type with the same Struct method). Keeping it tiny lets
-// callers swap in a no-op or a mock in tests.
 type Validator interface {
 	Struct(s any) error
 }
 
-// ResponseHandler owns JSON encoding, body binding+validation and error
-// responses. Construct it once at startup and pass into every API surface.
 type ResponseHandler struct {
 	logger    Logger
 	validator Validator
@@ -47,15 +38,12 @@ func NewResponseHandler(logger Logger, opts ...Option) *ResponseHandler {
 	return h
 }
 
-// ExceptionResponse is the JSON shape of a 4xx/5xx response body.
 type ExceptionResponse struct {
 	ErrorMessage string    `json:"errorMessage"`
 	Status       int       `json:"status"`
 	Timestamp    time.Time `json:"timestamp"`
 }
 
-// SendErrorResponse writes a 4xx/5xx JSON response. The status drives the
-// default human message (validation errors are flattened into a readable line).
 func (h *ResponseHandler) SendErrorResponse(w http.ResponseWriter, status int, err error) {
 	defaultMsg := ""
 	switch status {
@@ -88,7 +76,6 @@ func (h *ResponseHandler) SendErrorResponse(w http.ResponseWriter, status int, e
 	}
 }
 
-// SendSuccessResponse writes a 2xx JSON response with the given body.
 func (h *ResponseHandler) SendSuccessResponse(w http.ResponseWriter, status int, body any) {
 	payload, err := json.Marshal(body)
 	if err != nil {
@@ -107,8 +94,7 @@ func (h *ResponseHandler) SendSuccessResponse(w http.ResponseWriter, status int,
 	}
 }
 
-// BindJSON decodes JSON from body into params and, if a Validator was
-// configured, runs validate rules. Always closes body.
+// BindJSON закрывает body после чтения, в том числе при ошибке.
 func (h *ResponseHandler) BindJSON(body io.ReadCloser, params any) error {
 	defer func() { _ = body.Close() }()
 
@@ -125,8 +111,6 @@ func (h *ResponseHandler) BindJSON(body io.ReadCloser, params any) error {
 	return nil
 }
 
-// Validate runs validator rules without decoding — useful for URL query
-// structs that are populated manually before validation.
 func (h *ResponseHandler) Validate(params any) error {
 	if h.validator == nil {
 		return nil
@@ -134,8 +118,6 @@ func (h *ResponseHandler) Validate(params any) error {
 	return h.validator.Struct(params)
 }
 
-// flattenError converts validator.ValidationErrors into a human-readable
-// "Field rule; Field2 rule2" string; other errors are returned as-is.
 func flattenError(err error) string {
 	if err == nil {
 		return ""

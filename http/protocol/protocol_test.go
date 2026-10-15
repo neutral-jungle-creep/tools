@@ -140,7 +140,7 @@ func TestBindJSON_WithoutValidatorSkipsValidation(t *testing.T) {
 	t.Parallel()
 
 	h, _ := newHandler(t, false)
-	body := io.NopCloser(strings.NewReader(`{"name":""}`)) // would fail validation if enabled
+	body := io.NopCloser(strings.NewReader(`{"name":""}`))
 
 	var p person
 	require.NoError(t, h.BindJSON(body, &p))
@@ -150,10 +150,9 @@ func TestValidate_ReturnsFlattenedMessage(t *testing.T) {
 	t.Parallel()
 
 	h, _ := newHandler(t, true)
-	err := h.Validate(&person{Name: "x"}) // min=2 fails
+	err := h.Validate(&person{Name: "x"})
 	require.Error(t, err)
 
-	// SendErrorResponse must produce a readable line, not the raw verbose message
 	rec := httptest.NewRecorder()
 	h.SendErrorResponse(rec, http.StatusBadRequest, err)
 
