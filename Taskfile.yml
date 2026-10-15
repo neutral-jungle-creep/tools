@@ -84,17 +84,7 @@ tasks:
     cmds:
       - task: tests
       - go tool cover -html={{.COVERAGE_DIR}}/unit.out -o {{.COVERAGE_DIR}}/unit.html
-      - |
-        COVER=$(go tool cover -func={{.COVERAGE_DIR}}/unit.out) || exit 1
-        PCT=$(printf '%s\n' "$COVER" | awk '/^total:/ {gsub(/%/, "", $3); print $3}')
-        if [ -z "$PCT" ]; then
-          echo "Coverage total not found"
-          exit 1
-        fi
-        awk -v pct="$PCT" -v threshold="{{.MIN_UNIT_COVERAGE}}" 'BEGIN {
-          printf "Coverage: %.1f%% (threshold: %.1f%%)\n", pct, threshold
-          if (pct + 0 < threshold + 0) exit 1
-        }'
+      - bash scripts/check_coverage.sh {{.COVERAGE_DIR}}/unit.out {{.MIN_UNIT_COVERAGE}} ''
 
   build:
     cmds:
