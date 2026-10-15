@@ -65,9 +65,7 @@ func matchPattern(pattern, path string) (bool, map[string]string) {
 	return true, params
 }
 
-// Pattern returns the registered route pattern that matches (method, path),
-// or "" if no route matches. Useful for HTTP middleware that wants a
-// bounded route label.
+// Pattern возвращает шаблон маршрута для меток HTTP-метрик или пустую строку, если маршрут не найден.
 func (r *Router) Pattern(method, path string) string {
 	method = strings.ToUpper(method)
 	for _, ro := range r.routes[method] {
@@ -92,7 +90,6 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		}
 	}
 
-	// 405 if the path matches under another method, else 404.
 	for otherMethod, routes := range r.routes {
 		if otherMethod == method {
 			continue

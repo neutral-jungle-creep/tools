@@ -1,6 +1,3 @@
-// Package postgres opens a *sql.DB backed by the pgx/v5 stdlib driver and
-// applies pool sizing/timeouts. Importing this package registers the "pgx"
-// driver via its blank import.
 package postgres
 
 import (
@@ -10,16 +7,14 @@ import (
 	"fmt"
 	"time"
 
-	// pgx/v5 stdlib registers the "pgx" driver used by sql.Open below.
+	// Регистрируем драйвер pgx для database/sql.
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
 const defaultPingTimeout = 5 * time.Second
 
-// ErrEmptyDSN is returned when New is called without a DSN.
 var ErrEmptyDSN = errors.New("postgres dsn is empty")
 
-// Config carries the connection settings that callers commonly tune from env.
 type Config struct {
 	DSN             string
 	MaxOpenConns    int
@@ -28,10 +23,7 @@ type Config struct {
 	PingTimeout     time.Duration
 }
 
-// New opens a *sql.DB, applies pool sizing and verifies connectivity with a
-// PingContext bounded by Config.PingTimeout (defaultPingTimeout if zero).
-// On ping failure the pool is closed before the error is returned, so the
-// caller never receives a partially-initialised DB.
+// New закрывает пул при ошибке проверки соединения.
 func New(ctx context.Context, cfg Config) (*sql.DB, error) {
 	if cfg.DSN == "" {
 		return nil, ErrEmptyDSN

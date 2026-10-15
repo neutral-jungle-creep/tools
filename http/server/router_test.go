@@ -7,7 +7,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"tools/pkg/http/server"
+	"tools/http/server"
 )
 
 func TestRouter_StaticPath(t *testing.T) {
