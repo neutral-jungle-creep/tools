@@ -55,22 +55,16 @@ func (r *Registrar) Run(ctx context.Context) error {
 	}
 }
 
-// Stop ждёт все обработчики и объединяет их ошибки.
+// Stop выполняет обработчики в обратном порядке регистрации и объединяет их ошибки.
 func (r *Registrar) Stop() error {
 	r.mu.Lock()
 	stops := append([]StopHandler(nil), r.stops...)
 	r.mu.Unlock()
 
-	errs := make([]error, len(stops))
-	var wg sync.WaitGroup
-	wg.Add(len(stops))
-	for i, h := range stops {
-		go func(idx int, handler StopHandler) {
-			defer wg.Done()
-			errs[idx] = handler()
-		}(i, h)
+	errs := make([]error, 0, len(stops))
+	for i := len(stops) - 1; i >= 0; i-- {
+		errs = append(errs, stops[i]())
 	}
-	wg.Wait()
 
 	return errors.Join(errs...)
 }

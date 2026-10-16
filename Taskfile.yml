@@ -4,6 +4,8 @@ silent: true
 
 vars:
   COVERAGE_DIR: .coverage
+  MODULES:
+    sh: find . -name go.mod -not -path '*/vendor/*' -exec dirname {} \; | sort | tr '\n' ' '
   MIN_UNIT_COVERAGE:
     sh: 'echo ${MIN_UNIT_COVERAGE:-50}'
 
@@ -28,70 +30,90 @@ tasks:
   tidy:
     cmds:
       - echo "- Tidy"
-      - go mod tidy
+      - for module in {{.MODULES}}; do (cd "$module" && go mod tidy) || exit 1; done
 
   vendor:
     cmds:
       - echo "- Vendor"
-      - go mod vendor
+      - for module in {{.MODULES}}; do (cd "$module" && go mod vendor) || exit 1; done
 
   fmt:
     cmds:
       - echo "- Fmt"
-      - find . -path './vendor' -prune -o -name '*.go' -exec gofmt -s -w {} +
-      - find . -path './vendor' -prune -o -name '*.go' -exec go run golang.org/x/tools/cmd/goimports@latest -w -local github.com/neutral-jungle-creep/tools {} +
+      - find . -name vendor -prune -o -name '*.go' -exec gofmt -s -w {} +
+      - for module in {{.MODULES}}; do (cd "$module" && go run golang.org/x/tools/cmd/goimports@latest -w -local github.com/neutral-jungle-creep/tools .) || exit 1; done
+      - for module in {{.MODULES}}; do (cd "$module" && go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@{{.GOLANGCI_VERSION}} fmt ./...) || exit 1; done
 
   fmt:check:
     cmds:
       - echo "- Fmt check"
       - |
-        OUT=$(find . -path './vendor' -prune -o -name '*.go' -exec gofmt -l {} +) || exit 1
+        OUT=$(find . -name vendor -prune -o -name '*.go' -exec gofmt -l {} +) || exit 1
         if [ -n "$OUT" ]; then
           echo "Files not gofmt-ed:"
           echo "$OUT"
           exit 1
         fi
       - |
-        OUT=$(find . -path './vendor' -prune -o -name '*.go' -exec go run golang.org/x/tools/cmd/goimports@latest -l -local github.com/neutral-jungle-creep/tools {} +) || exit 1
-        if [ -n "$OUT" ]; then
-          echo "Files with bad imports:"
-          echo "$OUT"
-          exit 1
-        fi
+        for module in {{.MODULES}}; do
+          OUT=$(cd "$module" && go run golang.org/x/tools/cmd/goimports@latest -l -local github.com/neutral-jungle-creep/tools .) || exit 1
+          if [ -n "$OUT" ]; then echo "Files with bad imports in $module:"; echo "$OUT"; exit 1; fi
+        done
 
   lint:
     cmds:
       - echo "- Lint"
-      - go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@{{.GOLANGCI_VERSION}} run ./...
+      - for module in {{.MODULES}}; do (cd "$module" && go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@{{.GOLANGCI_VERSION}} run ./...) || exit 1; done
 
   lint:fix:
     cmds:
       - echo "- Lint fix"
-      - go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@{{.GOLANGCI_VERSION}} run --fix ./...
+      - for module in {{.MODULES}}; do (cd "$module" && go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@{{.GOLANGCI_VERSION}} run --fix ./...) || exit 1; done
 
   security:
     cmds:
       - echo "- Security (govulncheck)"
-      - go run golang.org/x/vuln/cmd/govulncheck@latest ./...
+      - for module in {{.MODULES}}; do (cd "$module" && go run golang.org/x/vuln/cmd/govulncheck@latest ./...) || exit 1; done
 
   tests:
     cmds:
       - echo "- Unit tests"
-      - mkdir -p {{.COVERAGE_DIR}}
-      - go test -race -count=1 -coverprofile={{.COVERAGE_DIR}}/unit.out ./...
+      - for module in {{.MODULES}}; do (cd "$module" && mkdir -p {{.COVERAGE_DIR}} && go test -race -count=1 -coverprofile={{.COVERAGE_DIR}}/unit.out ./...) || exit 1; done
 
   tests:coverage:
     cmds:
       - task: tests
-      - go tool cover -html={{.COVERAGE_DIR}}/unit.out -o {{.COVERAGE_DIR}}/unit.html
-      - bash scripts/check_coverage.sh {{.COVERAGE_DIR}}/unit.out {{.MIN_UNIT_COVERAGE}} ''
+      - for module in {{.MODULES}}; do (cd "$module" && go tool cover -html={{.COVERAGE_DIR}}/unit.out -o {{.COVERAGE_DIR}}/unit.html && bash "$(git rev-parse --show-toplevel)/scripts/check_coverage.sh" {{.COVERAGE_DIR}}/unit.out {{.MIN_UNIT_COVERAGE}} '') || exit 1; done
 
   build:
     cmds:
       - echo "- Build"
-      - go build ./...
+      - for module in {{.MODULES}}; do (cd "$module" && go build ./...) || exit 1; done
 
   clean:
     cmds:
       - echo "- Clean"
-      - rm -rf {{.COVERAGE_DIR}}
+      - for module in {{.MODULES}}; do rm -rf "$module/{{.COVERAGE_DIR}}"; done
+
+  release:
+    desc: 'Создать отдельные теги только для изменённых модулей: task release VERSION=0.1.0'
+    cmds:
+      - |
+        set -e
+        version="{{.VERSION}}"
+        test -n "$version" || { echo 'Укажите VERSION=0.1.0'; exit 1; }
+        case "$version" in v*) ;; *) version="v$version" ;; esac
+        for module in {{.MODULES}}; do
+          path="${module#./}"
+          tag="$path/$version"
+          if git rev-parse -q --verify "refs/tags/$tag" >/dev/null; then continue; fi
+          last=$(git tag -l "$path/v*" --sort=-version:refname | head -n 1)
+          set -- "$path"
+          for nested in {{.MODULES}}; do
+            nested="${nested#./}"
+            case "$nested" in "$path"/*) set -- "$@" ":(exclude)$nested" ;; esac
+          done
+          if [ -n "$last" ] && git diff --quiet "$last" HEAD -- "$@"; then continue; fi
+          git tag "$tag"
+          git push origin "refs/tags/$tag"
+        done
