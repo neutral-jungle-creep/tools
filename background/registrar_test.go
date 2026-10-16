@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"sync"
-	"sync/atomic"
 	"testing"
 	"time"
 
@@ -72,27 +71,21 @@ func TestRegistrar_Run_CtxCancelWinsOverPendingJobs(t *testing.T) {
 	require.NoError(t, err, "ctx cancel should beat the slow job")
 }
 
-func TestRegistrar_Stop_RunsAllHandlersInParallel(t *testing.T) {
+func TestRegistrar_Stop_RunsHandlersInReverseOrder(t *testing.T) {
 	t.Parallel()
 
 	r := background.New()
-	var ran int32
-
-	const n = 5
-	for i := 0; i < n; i++ {
+	var order []int
+	for i := 0; i < 3; i++ {
+		index := i
 		r.RegisterStopHandler(func() error {
-			time.Sleep(50 * time.Millisecond)
-			atomic.AddInt32(&ran, 1)
+			order = append(order, index)
 			return nil
 		})
 	}
 
-	start := time.Now()
 	require.NoError(t, r.Stop())
-	elapsed := time.Since(start)
-
-	assert.Equal(t, int32(n), atomic.LoadInt32(&ran), "all handlers must run")
-	assert.Less(t, elapsed, 200*time.Millisecond, "handlers must run in parallel")
+	assert.Equal(t, []int{2, 1, 0}, order)
 }
 
 func TestRegistrar_Stop_NoHandlersIsNoOp(t *testing.T) {
@@ -108,13 +101,24 @@ func TestRegistrar_Stop_JoinsErrors(t *testing.T) {
 	r := background.New()
 	errA := errors.New("close A failed")
 	errB := errors.New("close B failed")
-	r.RegisterStopHandler(func() error { return errA })
-	r.RegisterStopHandler(func() error { return nil })
-	r.RegisterStopHandler(func() error { return errB })
+	var order []string
+	r.RegisterStopHandler(func() error {
+		order = append(order, "A")
+		return errA
+	})
+	r.RegisterStopHandler(func() error {
+		order = append(order, "middle")
+		return nil
+	})
+	r.RegisterStopHandler(func() error {
+		order = append(order, "B")
+		return errB
+	})
 
 	err := r.Stop()
 	require.ErrorIs(t, err, errA)
 	require.ErrorIs(t, err, errB)
+	assert.Equal(t, []string{"B", "middle", "A"}, order)
 }
 
 func TestRegistrar_ConcurrentRegistrationIsSafe(t *testing.T) {
