@@ -102,8 +102,13 @@ func (h *ResponseHandler) SendNoContentResponse(w http.ResponseWriter) {
 func (h *ResponseHandler) BindJSON(body io.ReadCloser, params any) error {
 	defer func() { _ = body.Close() }()
 
-	if err := json.NewDecoder(body).Decode(params); err != nil {
+	decoder := json.NewDecoder(body)
+	if err := decoder.Decode(params); err != nil {
 		return fmt.Errorf("decode body: %w", err)
+	}
+	var trailing any
+	if err := decoder.Decode(&trailing); !errors.Is(err, io.EOF) {
+		return fmt.Errorf("decode body: expected a single JSON value")
 	}
 	if h.validator == nil {
 		return nil

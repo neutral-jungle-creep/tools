@@ -148,6 +148,18 @@ func TestBindJSON_DecodeError(t *testing.T) {
 	assert.Contains(t, err.Error(), "decode body")
 }
 
+func TestBindJSON_RejectsTrailingJSON(t *testing.T) {
+	t.Parallel()
+
+	h, _ := newHandler(t, false)
+	body := io.NopCloser(strings.NewReader(`{"name":"Bob"} true`))
+
+	var p person
+	err := h.BindJSON(body, &p)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "single JSON value")
+}
+
 func TestBindJSON_WithoutValidatorSkipsValidation(t *testing.T) {
 	t.Parallel()
 
