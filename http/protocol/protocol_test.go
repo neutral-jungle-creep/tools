@@ -95,6 +95,18 @@ func TestSendSuccessResponse_MarshalError(t *testing.T) {
 	assert.NotEmpty(t, log.calls, "logger must record the marshal failure")
 }
 
+func TestSendNoContentResponse(t *testing.T) {
+	t.Parallel()
+
+	rec := httptest.NewRecorder()
+	h, _ := newHandler(t, false)
+	h.SendNoContentResponse(rec)
+
+	assert.Equal(t, http.StatusNoContent, rec.Code)
+	assert.Empty(t, rec.Body.String())
+	assert.Empty(t, rec.Header().Get("Content-Type"))
+}
+
 type person struct {
 	Name string `json:"name" validate:"required,min=2"`
 }

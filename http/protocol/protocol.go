@@ -94,6 +94,10 @@ func (h *ResponseHandler) SendSuccessResponse(w http.ResponseWriter, status int,
 	}
 }
 
+func (h *ResponseHandler) SendNoContentResponse(w http.ResponseWriter) {
+	w.WriteHeader(http.StatusNoContent)
+}
+
 // BindJSON закрывает body после чтения, в том числе при ошибке.
 func (h *ResponseHandler) BindJSON(body io.ReadCloser, params any) error {
 	defer func() { _ = body.Close() }()
