@@ -108,7 +108,7 @@ func (h *ResponseHandler) BindJSON(body io.ReadCloser, params any) error {
 	}
 	var trailing any
 	if err := decoder.Decode(&trailing); !errors.Is(err, io.EOF) {
-		return fmt.Errorf("decode body: expected a single JSON value")
+		return errors.New("decode body: expected a single JSON value")
 	}
 	if h.validator == nil {
 		return nil
