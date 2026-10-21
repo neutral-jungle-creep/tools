@@ -95,6 +95,18 @@ func TestSendSuccessResponse_MarshalError(t *testing.T) {
 	assert.NotEmpty(t, log.calls, "logger must record the marshal failure")
 }
 
+func TestSendNoContentResponse(t *testing.T) {
+	t.Parallel()
+
+	rec := httptest.NewRecorder()
+	h, _ := newHandler(t, false)
+	h.SendNoContentResponse(rec)
+
+	assert.Equal(t, http.StatusNoContent, rec.Code)
+	assert.Empty(t, rec.Body.String())
+	assert.Empty(t, rec.Header().Get("Content-Type"))
+}
+
 type person struct {
 	Name string `json:"name" validate:"required,min=2"`
 }
@@ -134,6 +146,18 @@ func TestBindJSON_DecodeError(t *testing.T) {
 	err := h.BindJSON(body, &p)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "decode body")
+}
+
+func TestBindJSON_RejectsTrailingJSON(t *testing.T) {
+	t.Parallel()
+
+	h, _ := newHandler(t, false)
+	body := io.NopCloser(strings.NewReader(`{"name":"Bob"} true`))
+
+	var p person
+	err := h.BindJSON(body, &p)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "single JSON value")
 }
 
 func TestBindJSON_WithoutValidatorSkipsValidation(t *testing.T) {

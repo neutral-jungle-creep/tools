@@ -94,12 +94,21 @@ func (h *ResponseHandler) SendSuccessResponse(w http.ResponseWriter, status int,
 	}
 }
 
+func (h *ResponseHandler) SendNoContentResponse(w http.ResponseWriter) {
+	w.WriteHeader(http.StatusNoContent)
+}
+
 // BindJSON закрывает body после чтения, в том числе при ошибке.
 func (h *ResponseHandler) BindJSON(body io.ReadCloser, params any) error {
 	defer func() { _ = body.Close() }()
 
-	if err := json.NewDecoder(body).Decode(params); err != nil {
+	decoder := json.NewDecoder(body)
+	if err := decoder.Decode(params); err != nil {
 		return fmt.Errorf("decode body: %w", err)
+	}
+	var trailing any
+	if err := decoder.Decode(&trailing); !errors.Is(err, io.EOF) {
+		return errors.New("decode body: expected a single JSON value")
 	}
 	if h.validator == nil {
 		return nil
